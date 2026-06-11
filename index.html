@@ -102,6 +102,30 @@ border-radius:10px;
 display:none;
 background:black;
 }
+
+/* barra */
+.bar{
+margin-top:10px;
+background:#0f1525;
+border-radius:8px;
+height:14px;
+overflow:hidden;
+display:flex;
+}
+
+.siBar{
+background:#e74c3c;
+height:100%;
+width:50%;
+transition:0.3s;
+}
+
+.noBar{
+background:#2ecc71;
+height:100%;
+width:50%;
+transition:0.3s;
+}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -114,7 +138,7 @@ background:black;
 <div class="card">
 
 <h2>¿Eliminamos el servidor?</h2>
-<div class="badge">Panel de votación en vivo</div>
+<div class="badge">Panel de votación en tiempo real</div>
 
 <input id="name" placeholder="Nombre de usuario">
 
@@ -127,14 +151,23 @@ background:black;
 <button class="red" onclick="vote('si')">Eliminar servidor</button>
 <button class="green" onclick="vote('no')">Mantener servidor</button>
 
-<div class="status" id="msg">Esperando voto...</div>
+<div class="status" id="msg">Selecciona una opción para votar</div>
 
 <div class="status">
 Eliminar: <span id="si">0</span> |
 Mantener: <span id="no">0</span>
 </div>
 
-<h4>Usuarios conectados</h4>
+<div class="bar">
+<div id="barSi" class="siBar"></div>
+<div id="barNo" class="noBar"></div>
+</div>
+
+<div class="status" id="ultima">
+Sin actividad reciente
+</div>
+
+<h4>Participantes</h4>
 <div class="box">
 <ul id="users"></ul>
 </div>
@@ -147,7 +180,7 @@ Mantener: <span id="no">0</span>
 
 <script>
 
-// 🔥 FIREBASE
+// FIREBASE
 const firebaseConfig = {
 apiKey: "AIzaSyA2SgyB_hF3rSGIpVMiNdKk_P-1E6xxGyM",
 authDomain: "votacion-server.firebaseapp.com",
@@ -180,19 +213,23 @@ return;
 
 voted=true;
 
-// guardar
+// guardar votos
 db.ref("votes/"+op).transaction(n=> (n||0)+1);
 db.ref("users").push(user);
 
-// UI
+// mensaje
 let msg=document.getElementById("msg");
 let video=document.getElementById("video");
 
 msg.innerText = (op==="si")
-? "Registro enviado: eliminación del servidor"
-: "Registro enviado: mantenimiento del servidor";
+? "Registro: eliminación del servidor"
+: "Registro: mantenimiento del servidor";
 
-// 🔥 FIX VIDEO REAL (IMPORTANTE)
+// última acción
+document.getElementById("ultima").innerText =
+user + " votó: " + (op==="si" ? "Eliminar servidor" : "Mantener servidor");
+
+// video FIX REAL
 video.style.display="block";
 video.pause();
 video.removeAttribute("src");
@@ -201,8 +238,8 @@ video.load();
 setTimeout(()=>{
 
 video.src = (op==="si")
-? "ssstik.io_@pibbledipple_1778120515212.mp4"
-: "ssstik.io_@osdanone_1781160056885.mp4";
+? "ssstik.io_@osdanone_1781160056885.mp4"
+: "ssstik.io_@pibbledipple_1778120515212.mp4";
 
 video.load();
 video.play().catch(()=>{});
@@ -211,14 +248,25 @@ video.play().catch(()=>{});
 
 }
 
-// votos en vivo
+// votos en vivo + barra
 db.ref("votes").on("value", s=>{
 let d=s.val()||{};
-document.getElementById("si").innerText=d.si||0;
-document.getElementById("no").innerText=d.no||0;
+
+let si=d.si||0;
+let no=d.no||0;
+
+document.getElementById("si").innerText=si;
+document.getElementById("no").innerText=no;
+
+let total=si+no;
+
+if(total>0){
+document.getElementById("barSi").style.width=(si/total*100)+"%";
+document.getElementById("barNo").style.width=(no/total*100)+"%";
+}
 });
 
-// usuarios en vivo
+// usuarios
 db.ref("users").on("value", s=>{
 let d=s.val()||{};
 let list=document.getElementById("users");
