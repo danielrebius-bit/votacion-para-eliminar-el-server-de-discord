@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Decisión del servidor</title>
+
+<style>
+body{
+margin:0;
+font-family:system-ui, Arial;
+background: radial-gradient(circle at top,#151a2e,#0b0f1a);
+color:#e8e8e8;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.card{
+width:460px;
+background: rgba(20,25,45,0.88);
+border:1px solid #26314d;
+border-radius:14px;
+padding:20px;
+box-shadow:0 0 25px rgba(0,0,0,0.6);
+animation:fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+h2{
+font-size:16px;
+margin-bottom:8px;
+font-weight:600;
+}
+
+.badge{
+display:inline-block;
+padding:4px 8px;
+font-size:11px;
+border-radius:8px;
+background:#1f2a44;
+margin-bottom:10px;
+color:#9fb3d1;
+}
+
+input{
+width:100%;
+padding:10px;
+border-radius:8px;
+border:1px solid #2a3555;
+background:#0f1525;
+color:white;
+outline:none;
+margin-bottom:10px;
+}
+
+button{
+width:100%;
+padding:10px;
+margin-top:6px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+font-weight:600;
+transition:0.2s;
+}
+
+button:hover{
+transform:scale(1.02);
+}
+
+.red{background:#e74c3c;color:white;}
+.green{background:#2ecc71;color:white;}
+
+#panel{display:none;margin-top:15px;}
+
+.status{
+margin-top:10px;
+font-size:13px;
+color:#b0b0b0;
+}
+
+.box{
+margin-top:10px;
+background:#0f1525;
+border:1px solid #26314d;
+border-radius:10px;
+padding:10px;
+max-height:120px;
+overflow:auto;
+font-size:13px;
+}
+
+video{
+width:100%;
+margin-top:10px;
+border-radius:10px;
+display:none;
+background:black;
+}
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>¿Eliminamos el servidor?</h2>
+<div class="badge">Panel de votación en vivo</div>
+
+<input id="name" placeholder="Nombre de usuario">
+
+<button onclick="enter()">Entrar</button>
+
+<div id="panel">
+
+<h3>Conectado: <span id="user"></span></h3>
+
+<button class="red" onclick="vote('si')">Eliminar servidor</button>
+<button class="green" onclick="vote('no')">Mantener servidor</button>
+
+<div class="status" id="msg">Esperando voto...</div>
+
+<div class="status">
+Eliminar: <span id="si">0</span> |
+Mantener: <span id="no">0</span>
+</div>
+
+<h4>Usuarios conectados</h4>
+<div class="box">
+<ul id="users"></ul>
+</div>
+
+<video id="video" controls></video>
+
+</div>
+
+</div>
+
+<script>
+
+// 🔥 FIREBASE
+const firebaseConfig = {
+apiKey: "AIzaSyA2SgyB_hF3rSGIpVMiNdKk_P-1E6xxGyM",
+authDomain: "votacion-server.firebaseapp.com",
+databaseURL: "https://votacion-server-default-rtdb.firebaseio.com",
+projectId: "votacion-server"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let user="";
+let voted=false;
+
+// entrar
+function enter(){
+user=document.getElementById("name").value;
+if(!user) return alert("Escribe un nombre");
+
+document.getElementById("user").innerText=user;
+document.getElementById("panel").style.display="block";
+}
+
+// votar
+function vote(op){
+
+if(voted){
+alert("Ya has votado");
+return;
+}
+
+voted=true;
+
+// guardar
+db.ref("votes/"+op).transaction(n=> (n||0)+1);
+db.ref("users").push(user);
+
+// UI
+let msg=document.getElementById("msg");
+let video=document.getElementById("video");
+
+msg.innerText = (op==="si")
+? "Registro enviado: eliminación del servidor"
+: "Registro enviado: mantenimiento del servidor";
+
+// 🔥 FIX VIDEO REAL (IMPORTANTE)
+video.style.display="block";
+video.pause();
+video.removeAttribute("src");
+video.load();
+
+setTimeout(()=>{
+
+video.src = (op==="si")
+? "ssstik.io_@pibbledipple_1778120515212.mp4"
+: "ssstik.io_@osdanone_1781160056885.mp4";
+
+video.load();
+video.play().catch(()=>{});
+
+},120);
+
+}
+
+// votos en vivo
+db.ref("votes").on("value", s=>{
+let d=s.val()||{};
+document.getElementById("si").innerText=d.si||0;
+document.getElementById("no").innerText=d.no||0;
+});
+
+// usuarios en vivo
+db.ref("users").on("value", s=>{
+let d=s.val()||{};
+let list=document.getElementById("users");
+list.innerHTML="";
+Object.values(d).forEach(u=>{
+let li=document.createElement("li");
+li.innerText="• " + u;
+list.appendChild(li);
+});
+});
+
+</script>
+
+</body>
+</html>
